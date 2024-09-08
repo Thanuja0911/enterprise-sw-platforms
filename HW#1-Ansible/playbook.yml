@@ -1,0 +1,58 @@
+---
+- name: Deploy and Un-Deploy the webserver resources
+  hosts: web_servers
+  become: yes
+  tasks:
+
+    - name: Install Apache (httpd)
+      package:
+        name: httpd
+        state: present
+      tags:
+        - deploy
+
+    - name: Configure Apache to listen on port 8080
+      lineinfile:
+        path: /etc/httpd/conf/httpd.conf
+        regexp: '^Listen 80'
+        line: 'Listen 8080'
+        state: present
+      notify: Restart Apache
+      tags:
+        - deploy
+
+    - name: Start and Enable httpd service
+      service:
+        name: httpd
+        enabled: true
+        state: started
+      tags:
+        - deploy
+
+    - name: Deploy Web Server
+      template:
+        src: template.html
+        dest: /var/www/html/index.html
+      tags:
+        - deploy
+
+    - name: Un-Deploy Web Server
+      service:
+        name: httpd
+        enabled: false
+        state: stopped
+      tags:
+        - undeploy
+
+    - name: Remove Web Server Html
+      file:
+        path: /var/www/html/index.html
+        state: absent
+      tags:
+        - undeploy
+
+  handlers:
+    - name: Restart Apache
+      service:
+        name: httpd
+        state: restarted
